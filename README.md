@@ -2,12 +2,16 @@
 
 A portfolio-grade travel tech application scaffold for a flight search and booking experience.
 
-## Milestone 3
-- Flight details API endpoint
-- Flight details page with traveller form
-- Basic fare summary
-- Continue-to-booking flow foundation
-- Responsive UI with loading/error states
+## Milestone 4
+- Backend auth APIs for signup and login
+- Password hashing with bcryptjs
+- JWT-based authentication
+- Frontend login and signup pages
+- Auth context for managing global auth state
+- Storing auth tokens in browser localStorage
+- Header with logged-in user display and logout action
+- Protected booking review page (requires authentication)
+- Loading and error states throughout auth flow
 
 ## Repo Structure
 - `frontend/` — Next.js app
@@ -36,4 +40,10 @@ A portfolio-grade travel tech application scaffold for a flight search and booki
 ## Verify
 - Frontend: visit `http://localhost:3000`
 - Backend: visit `http://localhost:4000/api/health`
-- Search: enter JFK to LAX on 2024-04-10, select a flight, fill traveller form, continue to booking
+- Auth signup: click "Sign Up", create account with test email/password
+- Auth login: click "Login", login with created account
+- Search: enter JFK to LAX on 2024-04-10
+- Select flight and fill traveller form
+- Continue to booking (requires authentication - redirects to login if not logged in)
+- Verify header shows logged-in user and logout button
+- Click logout and verify redirect

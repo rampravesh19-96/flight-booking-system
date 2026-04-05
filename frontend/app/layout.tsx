@@ -1,15 +1,18 @@
-import './globals.css';
-import type { Metadata } from 'next';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Flight Booking System',
-  description: 'Portfolio-ready flight booking and confirmation application',
-};
+import './globals.css';
+import { AuthProvider } from '../contexts/AuthContext';
+import Header from '../components/Header';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          <Header />
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }

@@ -11,3 +11,28 @@ export interface Flight {
   availableSeats: number;
   seatClass: string;
 }
+
+export interface User {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Booking {
+  id: number;
+  userId: number;
+  flightId: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  totalPrice: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  flight: Flight;
+  user: User;
+}
