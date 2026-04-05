@@ -107,16 +107,16 @@ These states are surfaced in the booking timeline and admin-lite dashboard.
 ## Screenshots
 
 ### Search Results
-![Search Results](./screenshots/search-results.png)
+![Search Results](./screenshots/search-results.PNG)
 
 ### Booking Review
-![Booking Review](./screenshots/booking-review.png)
+![Booking Review](./screenshots/booking-review.PNG)
 
 ### My Bookings
-![My Bookings](./screenshots/my-bookings.png)
+![My Bookings](./screenshots/my-bookings.PNG)
 
 ### Razorpay Payment
-![Razorpay Payment](./screenshots/payment-modal.png)
+![Razorpay Payment](./screenshots/payment-modal.PNG)
 
 ## Local Setup
 
