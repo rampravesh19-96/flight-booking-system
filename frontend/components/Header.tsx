@@ -29,6 +29,9 @@ function HeaderContent() {
               <span className="text-slate-300">
                 Welcome, {user.firstName}
               </span>
+              <Link href="/ops/bookings" className="text-slate-300 hover:text-cyan-400">
+                Admin
+              </Link>
               <button
                 onClick={handleLogout}
                 className="rounded-md bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700"
