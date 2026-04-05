@@ -18,6 +18,7 @@ function ResultsContent() {
   const from = searchParams.get('from');
   const to = searchParams.get('to');
   const date = searchParams.get('date');
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
 
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +40,9 @@ function ResultsContent() {
     setSuggestedDates([]);
     try {
       const response = await fetch(
-        `http://localhost:4000/api/flights?from=${encodeURIComponent(from!)}&to=${encodeURIComponent(to!)}&date=${encodeURIComponent(date!)}&sortBy=${sortBy}&order=${order}`
+        `${API_BASE_URL}/api/flights?from=${encodeURIComponent(from!)}&to=${encodeURIComponent(
+          to!
+        )}&date=${encodeURIComponent(date!)}&sortBy=${sortBy}&order=${order}`
       );
       if (!response.ok) {
         throw new Error('Failed to fetch flights');
@@ -47,7 +50,6 @@ function ResultsContent() {
       const data = await response.json();
       setFlights(data);
 
-      // If no flights found, search nearby dates
       if (data.length === 0) {
         findNearbyDatesWithFlights();
       }
@@ -61,7 +63,7 @@ function ResultsContent() {
   const generateNearbyDates = (baseDate: Date) => {
     const dates: Date[] = [];
     for (let i = -3; i <= 3; i++) {
-      if (i === 0) continue; // Skip original date
+      if (i === 0) continue;
       const d = new Date(baseDate);
       d.setDate(d.getDate() + i);
       dates.push(d);
@@ -70,8 +72,8 @@ function ResultsContent() {
   };
 
   const formatDateForDisplay = (dateString: string) => {
-    const date = new Date(dateString + 'T00:00:00');
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const displayDate = new Date(dateString + 'T00:00:00');
+    return displayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   const findNearbyDatesWithFlights = async () => {
@@ -80,30 +82,33 @@ function ResultsContent() {
       const baseDate = new Date(date!);
       const nearbyDates = generateNearbyDates(baseDate);
 
-      // Check all nearby dates in parallel
       const results = await Promise.all(
         nearbyDates.map(async (d) => {
           const dateStr = d.toISOString().split('T')[0];
           try {
             const response = await fetch(
-              `http://localhost:4000/api/flights?from=${encodeURIComponent(from!)}&to=${encodeURIComponent(to!)}&date=${dateStr}&sortBy=price&order=asc`
+              `${API_BASE_URL}/api/flights?from=${encodeURIComponent(
+                from!
+              )}&to=${encodeURIComponent(to!)}&date=${dateStr}&sortBy=price&order=asc`
             );
             if (response.ok) {
               const data = await response.json();
-              return { date: dateStr, count: data.length, display: formatDateForDisplay(dateStr) };
+              return {
+                date: dateStr,
+                count: data.length,
+                display: formatDateForDisplay(dateStr),
+              };
             }
-          } catch (err) {
+          } catch {
             // Silently skip errors
           }
           return null;
         })
       );
 
-      // Filter valid results with flights, sort by proximity and count, take top 3
       const validDates = results
         .filter((r): r is SuggestedDate => r !== null && r.count > 0)
         .sort((a, b) => {
-          // Sort closer dates first, then by flight count
           const aDiff = Math.abs(new Date(a.date).getTime() - baseDate.getTime());
           const bDiff = Math.abs(new Date(b.date).getTime() - baseDate.getTime());
           return aDiff !== bDiff ? aDiff - bDiff : b.count - a.count;
@@ -111,8 +116,8 @@ function ResultsContent() {
         .slice(0, 3);
 
       setSuggestedDates(validDates);
-    } catch (err) {
-      // Silently fail - just won't show suggestions
+    } catch {
+      // Silently fail
     } finally {
       setLoadingSuggestions(false);
     }
@@ -120,7 +125,9 @@ function ResultsContent() {
 
   const handleSuggestedDateClick = (suggestionDate: string) => {
     router.push(
-      `/results?from=${encodeURIComponent(from!)}&to=${encodeURIComponent(to!)}&date=${encodeURIComponent(suggestionDate)}&sortBy=${sortBy}&order=${order}`
+      `/results?from=${encodeURIComponent(from!)}&to=${encodeURIComponent(
+        to!
+      )}&date=${encodeURIComponent(suggestionDate)}&sortBy=${sortBy}&order=${order}`
     );
   };
 
@@ -180,7 +187,6 @@ function ResultsContent() {
           </p>
         </div>
 
-        {/* Results Search Bar */}
         <ResultsSearchBar
           initialFrom={from}
           initialTo={to}
@@ -192,7 +198,7 @@ function ResultsContent() {
         {flights.length === 0 ? (
           <div className="rounded-lg border border-slate-700 bg-slate-900 p-8">
             <div className="text-center">
-              <p className="text-lg text-slate-300 mb-6">No flights found for the selected date.</p>
+              <p className="mb-6 text-lg text-slate-300">No flights found for the selected date.</p>
 
               {loadingSuggestions ? (
                 <div className="flex justify-center">
@@ -210,14 +216,17 @@ function ResultsContent() {
                         className="rounded-lg border border-cyan-600 bg-slate-800 px-4 py-3 text-sm font-medium text-cyan-400 transition-colors hover:bg-cyan-600/20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-900"
                       >
                         <div className="font-semibold">{suggestedDate.display}</div>
-                        <div className="text-xs text-cyan-300">{suggestedDate.count} flights</div>
+                        <div className="text-xs text-cyan-300">
+                          {suggestedDate.count} flights
+                        </div>
                       </button>
                     ))}
                   </div>
                 </div>
               ) : (
                 <p className="text-sm text-slate-400">
-                  No nearby dates have available flights. Try searching for a different date or route.
+                  No nearby dates have available flights. Try searching for a different date or
+                  route.
                 </p>
               )}
             </div>
@@ -271,21 +280,29 @@ function ResultsContent() {
                         </div>
                         <div className="text-center">
                           <p className="text-2xl font-bold">{formatTime(flight.departureTime)}</p>
-                          <p className="text-sm text-slate-400">{flight.departureCity} ({flight.departureAirport})</p>
+                          <p className="text-sm text-slate-400">
+                            {flight.departureCity} ({flight.departureAirport})
+                          </p>
                         </div>
                         <div className="flex-1 text-center">
                           <div className="mx-auto h-px w-16 bg-slate-600"></div>
-                          <p className="mt-1 text-sm text-slate-400">{formatDuration(flight.duration)}</p>
+                          <p className="mt-1 text-sm text-slate-400">
+                            {formatDuration(flight.duration)}
+                          </p>
                         </div>
                         <div className="text-center">
                           <p className="text-2xl font-bold">{formatTime(flight.arrivalTime)}</p>
-                          <p className="text-sm text-slate-400">{flight.arrivalCity} ({flight.arrivalAirport})</p>
+                          <p className="text-sm text-slate-400">
+                            {flight.arrivalCity} ({flight.arrivalAirport})
+                          </p>
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-cyan-400">${flight.price}</p>
-                      <p className="text-sm text-slate-400">{flight.availableSeats} seats available</p>
+                      <p className="text-2xl font-bold text-cyan-400">₹{flight.price}</p>
+                      <p className="text-sm text-slate-400">
+                        {flight.availableSeats} seats available
+                      </p>
                       <Link href={`/flights/${flight.id}`}>
                         <button className="mt-2 rounded-md bg-cyan-600 px-4 py-2 font-medium text-white hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-900">
                           Select Flight
@@ -305,16 +322,18 @@ function ResultsContent() {
 
 export default function ResultsPage() {
   return (
-    <Suspense fallback={
-      <main className="min-h-screen bg-slate-950 text-white">
-        <div className="mx-auto max-w-6xl px-6 py-12">
-          <div className="text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent"></div>
-            <p className="mt-4 text-slate-300">Loading...</p>
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-slate-950 text-white">
+          <div className="mx-auto max-w-6xl px-6 py-12">
+            <div className="text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent"></div>
+              <p className="mt-4 text-slate-300">Loading...</p>
+            </div>
           </div>
-        </div>
-      </main>
-    }>
+        </main>
+      }
+    >
       <ResultsContent />
     </Suspense>
   );
