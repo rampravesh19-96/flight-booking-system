@@ -2,12 +2,12 @@
 
 A portfolio-grade travel tech application scaffold for a flight search and booking experience.
 
-## Milestone 2
-- Flight search foundation with Prisma models and seed data
-- Backend API for flight search with sorting and filtering
-- Frontend search form and results page
-- Loading, empty, and error states
-- Responsive UI with Tailwind CSS
+## Milestone 3
+- Flight details API endpoint
+- Flight details page with traveller form
+- Basic fare summary
+- Continue-to-booking flow foundation
+- Responsive UI with loading/error states
 
 ## Repo Structure
 - `frontend/` — Next.js app
@@ -36,4 +36,4 @@ A portfolio-grade travel tech application scaffold for a flight search and booki
 ## Verify
 - Frontend: visit `http://localhost:3000`
 - Backend: visit `http://localhost:4000/api/health`
-- Search: enter JFK to LAX on 2024-04-10
+- Search: enter JFK to LAX on 2024-04-10, select a flight, fill traveller form, continue to booking

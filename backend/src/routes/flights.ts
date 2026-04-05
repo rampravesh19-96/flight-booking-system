@@ -45,4 +45,28 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const flightId = parseInt(id, 10);
+
+    if (isNaN(flightId)) {
+      return res.status(400).json({ error: 'Invalid flight ID' });
+    }
+
+    const flight = await prisma.flight.findUnique({
+      where: { id: flightId },
+    });
+
+    if (!flight) {
+      return res.status(404).json({ error: 'Flight not found' });
+    }
+
+    res.json(flight);
+  } catch (error) {
+    console.error('Error fetching flight:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

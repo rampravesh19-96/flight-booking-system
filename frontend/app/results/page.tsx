@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Flight } from '../../types';
 
 function ResultsContent() {
@@ -164,6 +165,11 @@ function ResultsContent() {
                   <div className="text-right">
                     <p className="text-2xl font-bold text-cyan-400">${flight.price}</p>
                     <p className="text-sm text-slate-400">{flight.availableSeats} seats available</p>
+                    <Link href={`/flights/${flight.id}`}>
+                      <button className="mt-2 rounded-md bg-cyan-600 px-4 py-2 font-medium text-white hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-900">
+                        Select Flight
+                      </button>
+                    </Link>
                   </div>
                 </div>
               </div>
