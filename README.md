@@ -104,6 +104,20 @@ These states are surfaced in the booking timeline and admin-lite dashboard.
 - `POST /api/payments/create-order`
 - `POST /api/payments/verify`
 
+## Screenshots
+
+### Search Results
+![Search Results](./screenshots/search-results.png)
+
+### Booking Review
+![Booking Review](./screenshots/booking-review.png)
+
+### My Bookings
+![My Bookings](./screenshots/my-bookings.png)
+
+### Razorpay Payment
+![Razorpay Payment](./screenshots/payment-modal.png)
+
 ## Local Setup
 
 ### 1. Clone the repository
