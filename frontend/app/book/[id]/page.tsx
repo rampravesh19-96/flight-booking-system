@@ -39,6 +39,8 @@ export default function BookingPage() {
   const [flight, setFlight] = useState<Flight | null>(null);
   const [traveller, setTraveller] = useState<TravellerDetails | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,14 +83,15 @@ export default function BookingPage() {
     }
   };
 
-  const handleConfirmBooking = async () => {
+  const handleProceedToPayment = async () => {
     if (!flight || !traveller || !token) return;
 
-    setConfirming(true);
-    setError(null);
+    setPaymentProcessing(true);
+    setPaymentError(null);
 
     try {
-      const response = await fetch('http://localhost:4000/api/bookings', {
+      // Create Razorpay order
+      const response = await fetch('http://localhost:4000/api/payments/create-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -96,25 +99,81 @@ export default function BookingPage() {
         },
         body: JSON.stringify({
           flightId: flight.id,
-          firstName: traveller.firstName,
-          lastName: traveller.lastName,
-          email: traveller.email,
-          phone: traveller.phone,
           totalPrice: flight.price,
         }),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to create booking');
+        throw new Error(data.error || 'Failed to create payment order');
+      }
+
+      const orderData = await response.json();
+
+      // Initialize Razorpay checkout
+      const options = {
+        key: orderData.razorpayKeyId,
+        amount: orderData.amount,
+        currency: 'INR',
+        name: 'Flight Booking',
+        description: `Flight ${flight.flightNumber} - ${flight.airline}`,
+        order_id: orderData.razorpayOrderId,
+        handler: async (response: any) => {
+          // Payment successful - verify on backend
+          await verifyPayment(orderData.bookingId, response, traveller);
+        },
+        prefill: {
+          name: `${traveller.firstName} ${traveller.lastName}`,
+          email: traveller.email,
+          contact: traveller.phone,
+        },
+        theme: {
+          color: '#0891b2', // cyan-600
+        },
+        modal: {
+          ondismiss: () => {
+            setPaymentError('Payment was cancelled. You can try again.');
+            setPaymentProcessing(false);
+          },
+        },
+      };
+
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.open();
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : 'Payment initialization failed');
+      setPaymentProcessing(false);
+    }
+  };
+
+  const verifyPayment = async (bookingId: number, razorpayResponse: any, travellerDetails: TravellerDetails) => {
+    try {
+      const response = await fetch('http://localhost:4000/api/payments/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          bookingId,
+          razorpayOrderId: razorpayResponse.razorpay_order_id,
+          razorpayPaymentId: razorpayResponse.razorpay_payment_id,
+          razorpaySignature: razorpayResponse.razorpay_signature,
+          travellerDetails,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Payment verification failed');
       }
 
       const bookingData = await response.json();
       setBooking(bookingData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setPaymentError(err instanceof Error ? err.message : 'Payment verification failed');
     } finally {
-      setConfirming(false);
+      setPaymentProcessing(false);
     }
   };
 
@@ -327,18 +386,18 @@ export default function BookingPage() {
             </div>
           </div>
 
-          {error && (
+          {paymentError && (
             <div className="mt-4 rounded-md border border-red-600 bg-red-900/30 px-4 py-3 text-red-400">
-              {error}
+              {paymentError}
             </div>
           )}
 
           <button
-            onClick={handleConfirmBooking}
-            disabled={confirming}
+            onClick={handleProceedToPayment}
+            disabled={paymentProcessing}
             className="mt-6 w-full rounded-md bg-green-600 px-4 py-3 font-medium text-white hover:bg-green-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-slate-900"
           >
-            {confirming ? 'Confirming Booking...' : 'Confirm Booking'}
+            {paymentProcessing ? 'Processing Payment...' : 'Proceed to Payment'}
           </button>
         </div>
       </div>

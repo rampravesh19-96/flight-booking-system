@@ -36,17 +36,24 @@ model Flight {
 }
 
 model Booking {
-  id            Int     @id @default(autoincrement())
-  userId        Int
-  flightId      Int
-  firstName     String
-  lastName      String
-  email         String
-  phone         String
-  totalPrice    Float
-  status        String  @default("confirmed")
-  user          User    @relation(fields: [userId], references: [id])
-  flight        Flight  @relation(fields: [flightId], references: [id])
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                    Int       @id @default(autoincrement())
+  userId                Int
+  flightId              Int
+  firstName             String
+  lastName              String
+  email                 String
+  phone                 String
+  totalPrice            Float
+
+  // Payment fields
+  razorpayOrderId       String?
+  razorpayPaymentId     String?
+  razorpaySignature     String?
+  paymentStatus         String    @default("pending")
+
+  status                String    @default("pending")
+  user                  User      @relation(fields: [userId], references: [id])
+  flight                Flight    @relation(fields: [flightId], references: [id])
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 }
