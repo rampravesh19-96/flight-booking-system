@@ -3,7 +3,8 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
-  // Clear existing data
+  // Clear existing data in dependency-safe order
+  await prisma.booking.deleteMany();
   await prisma.flight.deleteMany();
 
   // Seed flights
