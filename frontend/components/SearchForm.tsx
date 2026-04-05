@@ -2,6 +2,32 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import CityCombobox from './CityCombobox';
+import { City } from '../types';
+
+const cities: City[] = [
+  // Major Indian Metros
+  { city: 'Delhi', code: 'DEL', tier: 'metro' },
+  { city: 'Mumbai', code: 'BOM', tier: 'metro' },
+  { city: 'Bangalore', code: 'BLR', tier: 'metro' },
+  { city: 'Hyderabad', code: 'HYD', tier: 'metro' },
+  { city: 'Chennai', code: 'MAA', tier: 'metro' },
+  { city: 'Kolkata', code: 'CCU', tier: 'metro' },
+  { city: 'Pune', code: 'PNQ', tier: 'metro' },
+  { city: 'Ahmedabad', code: 'AMD', tier: 'metro' },
+  // Tier-2 Indian Cities
+  { city: 'Goa', code: 'GOI', tier: 'tier2' },
+  { city: 'Jaipur', code: 'JAI', tier: 'tier2' },
+  { city: 'Kochi', code: 'COK', tier: 'tier2' },
+  { city: 'Lucknow', code: 'LKO', tier: 'tier2' },
+  { city: 'Chandigarh', code: 'IXC', tier: 'tier2' },
+  // International Hubs
+  { city: 'Dubai', code: 'DXB', tier: 'intl' },
+  { city: 'Singapore', code: 'SIN', tier: 'intl' },
+  { city: 'London', code: 'LHR', tier: 'intl' },
+  { city: 'Bangkok', code: 'BKK', tier: 'intl' },
+  { city: 'New York', code: 'JFK', tier: 'intl' },
+];
 
 export default function SearchForm() {
   const [from, setFrom] = useState('');
@@ -23,28 +49,22 @@ export default function SearchForm() {
           <label htmlFor="from" className="block text-sm font-medium text-slate-300">
             From
           </label>
-          <input
-            type="text"
-            id="from"
+          <CityCombobox
             value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            placeholder="e.g., JFK"
-            className="mt-1 block w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-            required
+            onChange={setFrom}
+            placeholder="Select departure city"
+            cities={cities}
           />
         </div>
         <div>
           <label htmlFor="to" className="block text-sm font-medium text-slate-300">
             To
           </label>
-          <input
-            type="text"
-            id="to"
+          <CityCombobox
             value={to}
-            onChange={(e) => setTo(e.target.value)}
-            placeholder="e.g., LAX"
-            className="mt-1 block w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-            required
+            onChange={setTo}
+            placeholder="Select destination city"
+            cities={cities}
           />
         </div>
         <div>

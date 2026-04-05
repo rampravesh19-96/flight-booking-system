@@ -15,13 +15,35 @@ router.get('/', async (req, res) => {
     const nextDay = new Date(searchDate);
     nextDay.setDate(nextDay.getDate() + 1);
 
+    // Search for flights where either airport code or city name matches (case-insensitive)
+  const fromInput = (from as string).trim();
+    const toInput = (to as string).trim();
+
     let where: any = {
-      departureAirport: from as string,
-      arrivalAirport: to as string,
-      departureTime: {
-        gte: searchDate,
-        lt: nextDay,
-      },
+      AND: [
+        {
+          OR: [
+            { departureAirport: { contains: fromInput } },
+            { departureAirport: { contains: fromInput.toUpperCase() } },
+            { departureCity: { contains: fromInput } },
+            { departureCity: { contains: fromInput.charAt(0).toUpperCase() + fromInput.slice(1).toLowerCase() } }
+          ]
+        },
+        {
+          OR: [
+            { arrivalAirport: { contains: toInput } },
+            { arrivalAirport: { contains: toInput.toUpperCase() } },
+            { arrivalCity: { contains: toInput } },
+            { arrivalCity: { contains: toInput.charAt(0).toUpperCase() + toInput.slice(1).toLowerCase() } }
+          ]
+        },
+        {
+          departureTime: {
+            gte: searchDate,
+            lt: nextDay,
+          },
+        },
+      ],
     };
 
     let orderBy: any = {};

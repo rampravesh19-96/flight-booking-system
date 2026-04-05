@@ -23,7 +23,9 @@ model Flight {
   airline         String
   flightNumber    String   @unique
   departureAirport String
+  departureCity   String
   arrivalAirport  String
+  arrivalCity     String
   departureTime   DateTime
   arrivalTime     DateTime
   price           Float

@@ -1,12 +1,20 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import ResultsSearchBar from '../../components/ResultsSearchBar';
 import { Flight } from '../../types';
+
+interface SuggestedDate {
+  date: string;
+  count: number;
+  display: string;
+}
 
 function ResultsContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const from = searchParams.get('from');
   const to = searchParams.get('to');
   const date = searchParams.get('date');
@@ -16,6 +24,8 @@ function ResultsContent() {
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('price');
   const [order, setOrder] = useState('asc');
+  const [suggestedDates, setSuggestedDates] = useState<SuggestedDate[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
   useEffect(() => {
     if (from && to && date) {
@@ -26,6 +36,7 @@ function ResultsContent() {
   const fetchFlights = async () => {
     setLoading(true);
     setError(null);
+    setSuggestedDates([]);
     try {
       const response = await fetch(
         `http://localhost:4000/api/flights?from=${encodeURIComponent(from!)}&to=${encodeURIComponent(to!)}&date=${encodeURIComponent(date!)}&sortBy=${sortBy}&order=${order}`
@@ -35,11 +46,82 @@ function ResultsContent() {
       }
       const data = await response.json();
       setFlights(data);
+
+      // If no flights found, search nearby dates
+      if (data.length === 0) {
+        findNearbyDatesWithFlights();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
+  };
+
+  const generateNearbyDates = (baseDate: Date) => {
+    const dates: Date[] = [];
+    for (let i = -3; i <= 3; i++) {
+      if (i === 0) continue; // Skip original date
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() + i);
+      dates.push(d);
+    }
+    return dates;
+  };
+
+  const formatDateForDisplay = (dateString: string) => {
+    const date = new Date(dateString + 'T00:00:00');
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  const findNearbyDatesWithFlights = async () => {
+    setLoadingSuggestions(true);
+    try {
+      const baseDate = new Date(date!);
+      const nearbyDates = generateNearbyDates(baseDate);
+
+      // Check all nearby dates in parallel
+      const results = await Promise.all(
+        nearbyDates.map(async (d) => {
+          const dateStr = d.toISOString().split('T')[0];
+          try {
+            const response = await fetch(
+              `http://localhost:4000/api/flights?from=${encodeURIComponent(from!)}&to=${encodeURIComponent(to!)}&date=${dateStr}&sortBy=price&order=asc`
+            );
+            if (response.ok) {
+              const data = await response.json();
+              return { date: dateStr, count: data.length, display: formatDateForDisplay(dateStr) };
+            }
+          } catch (err) {
+            // Silently skip errors
+          }
+          return null;
+        })
+      );
+
+      // Filter valid results with flights, sort by proximity and count, take top 3
+      const validDates = results
+        .filter((r): r is SuggestedDate => r !== null && r.count > 0)
+        .sort((a, b) => {
+          // Sort closer dates first, then by flight count
+          const aDiff = Math.abs(new Date(a.date).getTime() - baseDate.getTime());
+          const bDiff = Math.abs(new Date(b.date).getTime() - baseDate.getTime());
+          return aDiff !== bDiff ? aDiff - bDiff : b.count - a.count;
+        })
+        .slice(0, 3);
+
+      setSuggestedDates(validDates);
+    } catch (err) {
+      // Silently fail - just won't show suggestions
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const handleSuggestedDateClick = (suggestionDate: string) => {
+    router.push(
+      `/results?from=${encodeURIComponent(from!)}&to=${encodeURIComponent(to!)}&date=${encodeURIComponent(suggestionDate)}&sortBy=${sortBy}&order=${order}`
+    );
   };
 
   const formatTime = (dateString: string) => {
@@ -98,83 +180,123 @@ function ResultsContent() {
           </p>
         </div>
 
-        <div className="mb-6 flex flex-wrap gap-4">
-          <div>
-            <label htmlFor="sortBy" className="block text-sm font-medium text-slate-300">
-              Sort by
-            </label>
-            <select
-              id="sortBy"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="mt-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-            >
-              <option value="price">Price</option>
-              <option value="duration">Duration</option>
-              <option value="departureTime">Departure Time</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="order" className="block text-sm font-medium text-slate-300">
-              Order
-            </label>
-            <select
-              id="order"
-              value={order}
-              onChange={(e) => setOrder(e.target.value)}
-              className="mt-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-            >
-              <option value="asc">Ascending</option>
-              <option value="desc">Descending</option>
-            </select>
-          </div>
-        </div>
+        {/* Results Search Bar */}
+        <ResultsSearchBar
+          initialFrom={from}
+          initialTo={to}
+          initialDate={date}
+          sortBy={sortBy}
+          order={order}
+        />
 
         {flights.length === 0 ? (
-          <div className="text-center">
-            <p className="text-slate-300">No flights found for the selected criteria.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {flights.map((flight) => (
-              <div
-                key={flight.id}
-                className="rounded-lg border border-slate-700 bg-slate-900 p-6 shadow-lg"
-              >
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <h3 className="text-lg font-semibold">{flight.airline}</h3>
-                        <p className="text-sm text-slate-400">{flight.flightNumber}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-2xl font-bold">{formatTime(flight.departureTime)}</p>
-                        <p className="text-sm text-slate-400">{flight.departureAirport}</p>
-                      </div>
-                      <div className="flex-1 text-center">
-                        <div className="mx-auto h-px w-16 bg-slate-600"></div>
-                        <p className="mt-1 text-sm text-slate-400">{formatDuration(flight.duration)}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-2xl font-bold">{formatTime(flight.arrivalTime)}</p>
-                        <p className="text-sm text-slate-400">{flight.arrivalAirport}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-cyan-400">${flight.price}</p>
-                    <p className="text-sm text-slate-400">{flight.availableSeats} seats available</p>
-                    <Link href={`/flights/${flight.id}`}>
-                      <button className="mt-2 rounded-md bg-cyan-600 px-4 py-2 font-medium text-white hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-900">
-                        Select Flight
+          <div className="rounded-lg border border-slate-700 bg-slate-900 p-8">
+            <div className="text-center">
+              <p className="text-lg text-slate-300 mb-6">No flights found for the selected date.</p>
+
+              {loadingSuggestions ? (
+                <div className="flex justify-center">
+                  <div className="inline-block h-6 w-6 animate-spin rounded-full border-3 border-cyan-500 border-t-transparent"></div>
+                  <span className="ml-3 text-slate-300">Checking nearby dates...</span>
+                </div>
+              ) : suggestedDates.length > 0 ? (
+                <div>
+                  <p className="mb-4 text-sm text-slate-400">Try searching on nearby dates:</p>
+                  <div className="flex flex-wrap justify-center gap-3">
+                    {suggestedDates.map((suggestedDate) => (
+                      <button
+                        key={suggestedDate.date}
+                        onClick={() => handleSuggestedDateClick(suggestedDate.date)}
+                        className="rounded-lg border border-cyan-600 bg-slate-800 px-4 py-3 text-sm font-medium text-cyan-400 transition-colors hover:bg-cyan-600/20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-900"
+                      >
+                        <div className="font-semibold">{suggestedDate.display}</div>
+                        <div className="text-xs text-cyan-300">{suggestedDate.count} flights</div>
                       </button>
-                    </Link>
+                    ))}
                   </div>
                 </div>
-              </div>
-            ))}
+              ) : (
+                <p className="text-sm text-slate-400">
+                  No nearby dates have available flights. Try searching for a different date or route.
+                </p>
+              )}
+            </div>
           </div>
+        ) : (
+          <>
+            <div className="mb-6 flex flex-wrap gap-4">
+              <div>
+                <label htmlFor="sortBy" className="block text-sm font-medium text-slate-300">
+                  Sort by
+                </label>
+                <select
+                  id="sortBy"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="mt-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                >
+                  <option value="price">Price</option>
+                  <option value="duration">Duration</option>
+                  <option value="departureTime">Departure Time</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="order" className="block text-sm font-medium text-slate-300">
+                  Order
+                </label>
+                <select
+                  id="order"
+                  value={order}
+                  onChange={(e) => setOrder(e.target.value)}
+                  className="mt-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                >
+                  <option value="asc">Ascending</option>
+                  <option value="desc">Descending</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {flights.map((flight) => (
+                <div
+                  key={flight.id}
+                  className="rounded-lg border border-slate-700 bg-slate-900 p-6 shadow-lg"
+                >
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <h3 className="text-lg font-semibold">{flight.airline}</h3>
+                          <p className="text-sm text-slate-400">{flight.flightNumber}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold">{formatTime(flight.departureTime)}</p>
+                          <p className="text-sm text-slate-400">{flight.departureCity} ({flight.departureAirport})</p>
+                        </div>
+                        <div className="flex-1 text-center">
+                          <div className="mx-auto h-px w-16 bg-slate-600"></div>
+                          <p className="mt-1 text-sm text-slate-400">{formatDuration(flight.duration)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold">{formatTime(flight.arrivalTime)}</p>
+                          <p className="text-sm text-slate-400">{flight.arrivalCity} ({flight.arrivalAirport})</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-cyan-400">${flight.price}</p>
+                      <p className="text-sm text-slate-400">{flight.availableSeats} seats available</p>
+                      <Link href={`/flights/${flight.id}`}>
+                        <button className="mt-2 rounded-md bg-cyan-600 px-4 py-2 font-medium text-white hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-900">
+                          Select Flight
+                        </button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </main>

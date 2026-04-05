@@ -3,13 +3,21 @@ export interface Flight {
   airline: string;
   flightNumber: string;
   departureAirport: string;
+  departureCity: string;
   arrivalAirport: string;
+  arrivalCity: string;
   departureTime: string;
   arrivalTime: string;
   price: number;
   duration: number;
   availableSeats: number;
   seatClass: string;
+}
+
+export interface City {
+  city: string;
+  code: string;
+  tier: 'metro' | 'tier2' | 'intl';
 }
 
 export interface User {
