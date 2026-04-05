@@ -18,7 +18,7 @@ function ResultsContent() {
   const from = searchParams.get('from');
   const to = searchParams.get('to');
   const date = searchParams.get('date');
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);

@@ -36,7 +36,7 @@ export default function FlightDetailsPage() {
     setLoading(true);
     setError(null);
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
         const response = await fetch(`${API_BASE_URL}/api/flights/${flightId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch flight details');

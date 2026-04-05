@@ -80,7 +80,7 @@ export default function BookingPage() {
 
   const fetchFlight = async () => {
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
         const response = await fetch(`${API_BASE_URL}/api/flights/${flightId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch flight details');
@@ -103,7 +103,7 @@ export default function BookingPage() {
 
     try {
       // First, recheck fare and availability
-      const recheckResponse = await fetch('http://localhost:4000/api/payments/fare-recheck', {
+      const recheckResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/payments/fare-recheck`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -149,7 +149,7 @@ export default function BookingPage() {
 
     try {
       // Create Razorpay order
-      const response = await fetch('http://localhost:4000/api/payments/create-order', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/payments/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -216,7 +216,7 @@ export default function BookingPage() {
 
   const verifyPayment = async (bookingId: number, razorpayResponse: any, travellerDetails: TravellerDetails) => {
     try {
-      const response = await fetch('http://localhost:4000/api/payments/verify', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/payments/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

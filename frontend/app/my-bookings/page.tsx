@@ -57,7 +57,7 @@ export default function MyBookingsPage() {
 
   const fetchBookings = async () => {
     try {
-      const response = await fetch('http://localhost:4000/api/bookings', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/bookings`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -79,7 +79,7 @@ export default function MyBookingsPage() {
   const cancelBooking = async (bookingId: number) => {
     setCancellingId(bookingId);
     try {
-      const response = await fetch(`http://localhost:4000/api/bookings/${bookingId}/cancel`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/bookings/${bookingId}/cancel`, {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,

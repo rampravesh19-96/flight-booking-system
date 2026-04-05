@@ -34,7 +34,7 @@ export default function AdminBookingsPage() {
 
     try {
       const query = status === 'all' ? '' : `?status=${status}`;
-      const response = await fetch(`http://localhost:4000/api/admin/bookings${query}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/bookings${query}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -58,7 +58,7 @@ export default function AdminBookingsPage() {
     setUpdatingId(bookingId);
 
     try {
-      const response = await fetch(`http://localhost:4000/api/admin/bookings/${bookingId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/bookings/${bookingId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
