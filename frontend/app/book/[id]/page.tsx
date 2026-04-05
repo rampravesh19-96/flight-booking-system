@@ -5,6 +5,7 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../../contexts/AuthContext';
 import { Flight } from '../../../types';
+import BookingStatusTimeline from '../../../components/BookingStatusTimeline';
 
 interface TravellerDetails {
   firstName: string;
@@ -25,6 +26,7 @@ interface Booking {
   status: string;
   createdAt: string;
   updatedAt: string;
+  cancelledAt?: string;
   flight: Flight;
 }
 
@@ -41,6 +43,14 @@ export default function BookingPage() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [fareRecheckResult, setFareRecheckResult] = useState<{
+    isValid: boolean;
+    currentPrice?: number;
+    priceChanged?: boolean;
+    availableSeats?: number;
+    message?: string;
+  } | null>(null);
+  const [showFareDialog, setShowFareDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +98,53 @@ export default function BookingPage() {
 
     setPaymentProcessing(true);
     setPaymentError(null);
+    setFareRecheckResult(null);
+
+    try {
+      // First, recheck fare and availability
+      const recheckResponse = await fetch('http://localhost:4000/api/payments/fare-recheck', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          flightId: flight.id,
+          expectedPrice: flight.price,
+        }),
+      });
+
+      if (!recheckResponse.ok) {
+        throw new Error('Fare check failed');
+      }
+
+      const recheckData = await recheckResponse.json();
+      setFareRecheckResult(recheckData);
+
+      if (!recheckData.isValid) {
+        if (recheckData.priceChanged) {
+          // Show fare change dialog
+          setShowFareDialog(true);
+          setPaymentProcessing(false);
+          return;
+        } else {
+          // Show error (no seats available)
+          setPaymentError(recheckData.message || 'Flight is no longer available');
+          setPaymentProcessing(false);
+          return;
+        }
+      }
+
+      // Fare is valid, proceed with payment
+      await proceedWithPayment();
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : 'Fare check failed');
+      setPaymentProcessing(false);
+    }
+  };
+
+  const proceedWithPayment = async () => {
+    if (!flight || !traveller) return;
 
     try {
       // Create Razorpay order
@@ -99,7 +156,7 @@ export default function BookingPage() {
         },
         body: JSON.stringify({
           flightId: flight.id,
-          totalPrice: flight.price,
+          totalPrice: fareRecheckResult?.currentPrice || flight.price,
         }),
       });
 
@@ -144,6 +201,16 @@ export default function BookingPage() {
       setPaymentError(err instanceof Error ? err.message : 'Payment initialization failed');
       setPaymentProcessing(false);
     }
+  };
+
+  const handleFareDialogConfirm = () => {
+    setShowFareDialog(false);
+    proceedWithPayment();
+  };
+
+  const handleFareDialogCancel = () => {
+    setShowFareDialog(false);
+    setPaymentProcessing(false);
   };
 
   const verifyPayment = async (bookingId: number, razorpayResponse: any, travellerDetails: TravellerDetails) => {
@@ -257,6 +324,15 @@ export default function BookingPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Booking Status Timeline */}
+          <div className="mt-8 rounded-lg border border-slate-700 bg-slate-900 p-6">
+            <BookingStatusTimeline
+              status={booking.status}
+              createdAt={booking.createdAt}
+              cancelledAt={booking.cancelledAt}
+            />
           </div>
 
           <div className="mt-8 flex gap-4">
@@ -400,6 +476,36 @@ export default function BookingPage() {
             {paymentProcessing ? 'Processing Payment...' : 'Proceed to Payment'}
           </button>
         </div>
+
+        {/* Fare Change Dialog */}
+        {showFareDialog && fareRecheckResult && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-md rounded-lg border border-slate-700 bg-slate-900 p-6">
+              <h3 className="text-lg font-semibold text-yellow-400">Fare Price Update</h3>
+              <p className="mt-2 text-slate-300">
+                The fare for this flight has been updated from <span className="font-semibold text-red-400">${flight.price}</span> to{' '}
+                <span className="font-semibold text-green-400">${fareRecheckResult.currentPrice}</span>.
+              </p>
+              <p className="mt-2 text-sm text-slate-400">
+                Would you like to continue with the updated fare?
+              </p>
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={handleFareDialogConfirm}
+                  className="flex-1 rounded-md bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700"
+                >
+                  Continue with ${fareRecheckResult.currentPrice}
+                </button>
+                <button
+                  onClick={handleFareDialogCancel}
+                  className="flex-1 rounded-md border border-slate-600 px-4 py-2 font-medium text-slate-300 hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );

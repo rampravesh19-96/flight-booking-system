@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../contexts/AuthContext';
+import BookingStatusTimeline from '../../components/BookingStatusTimeline';
 
 interface Flight {
   id: number;
@@ -30,6 +31,7 @@ interface Booking {
   status: string;
   createdAt: string;
   updatedAt: string;
+  cancelledAt?: string;
   flight: Flight;
 }
 
@@ -39,6 +41,8 @@ export default function MyBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
+  const [showCancelDialog, setShowCancelDialog] = useState<number | null>(null);
 
   useEffect(() => {
     if (!authLoading) {
@@ -69,6 +73,37 @@ export default function MyBookingsPage() {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const cancelBooking = async (bookingId: number) => {
+    setCancellingId(bookingId);
+    try {
+      const response = await fetch(`http://localhost:4000/api/bookings/${bookingId}/cancel`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to cancel booking');
+      }
+
+      // Update the booking status in the local state
+      setBookings(prevBookings =>
+        prevBookings.map(booking =>
+          booking.id === bookingId
+            ? { ...booking, status: 'cancelled', cancelledAt: new Date().toISOString() }
+            : booking
+        )
+      );
+      setShowCancelDialog(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel booking');
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -261,20 +296,66 @@ export default function MyBookingsPage() {
                   </div>
                 </div>
 
+                <div className="mb-4 border-t border-slate-700 pt-4">
+                  <BookingStatusTimeline
+                    status={booking.status}
+                    createdAt={booking.createdAt}
+                    cancelledAt={booking.cancelledAt}
+                  />
+                </div>
+
                 <div className="border-t border-slate-700 pt-4">
-                  <p className="text-xs text-slate-500">
-                    Booked on {formatDate(booking.createdAt)} at{' '}
-                    {new Date(booking.createdAt).toLocaleTimeString('en-US', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-slate-500">
+                      Booked on {formatDate(booking.createdAt)} at{' '}
+                      {new Date(booking.createdAt).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                    {booking.status === 'confirmed' && (
+                      <button
+                        onClick={() => setShowCancelDialog(booking.id)}
+                        disabled={cancellingId === booking.id}
+                        className="rounded-md border border-red-600 px-3 py-1 text-sm font-medium text-red-400 hover:bg-red-900/30 disabled:opacity-50"
+                      >
+                        {cancellingId === booking.id ? 'Cancelling...' : 'Cancel Booking'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Cancel Booking Confirmation Dialog */}
+      {showCancelDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="mx-4 w-full max-w-md rounded-lg border border-slate-700 bg-slate-900 p-6">
+            <h3 className="text-lg font-semibold text-white">Cancel Booking</h3>
+            <p className="mt-2 text-sm text-slate-300">
+              Are you sure you want to cancel this booking? This action cannot be undone.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setShowCancelDialog(null)}
+                className="flex-1 rounded-md border border-slate-600 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800"
+              >
+                Keep Booking
+              </button>
+              <button
+                onClick={() => cancelBooking(showCancelDialog)}
+                disabled={cancellingId === showCancelDialog}
+                className="flex-1 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {cancellingId === showCancelDialog ? 'Cancelling...' : 'Cancel Booking'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

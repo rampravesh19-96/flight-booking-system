@@ -31,6 +31,11 @@ export interface Booking {
   phone: string;
   totalPrice: number;
   status: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
+  paymentStatus: string;
+  cancelledAt?: string;
   createdAt: string;
   updatedAt: string;
   flight: Flight;

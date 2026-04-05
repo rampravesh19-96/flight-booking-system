@@ -5,6 +5,56 @@ import { createOrder, verifySignature } from '../utils/razorpay';
 
 const router = Router();
 
+// Fare recheck endpoint (protected)
+router.post('/fare-recheck', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { flightId, expectedPrice } = req.body;
+
+    if (!flightId || !expectedPrice) {
+      return res.status(400).json({ error: 'Missing flightId or expectedPrice' });
+    }
+
+    // Get current flight data
+    const flight = await prisma.flight.findUnique({
+      where: { id: flightId },
+    });
+
+    if (!flight) {
+      return res.status(404).json({ error: 'Flight not found' });
+    }
+
+    // Check availability
+    if (flight.availableSeats <= 0) {
+      return res.json({
+        isValid: false,
+        message: 'This flight is no longer available. Please select another flight.',
+        availableSeats: flight.availableSeats,
+      });
+    }
+
+    // Check price
+    if (Math.abs(flight.price - expectedPrice) > 0.01) {
+      return res.json({
+        isValid: false,
+        message: 'Flight fare has been updated.',
+        currentPrice: flight.price,
+        priceChanged: true,
+        availableSeats: flight.availableSeats,
+      });
+    }
+
+    // Fare and availability are valid
+    res.json({
+      isValid: true,
+      currentPrice: flight.price,
+      availableSeats: flight.availableSeats,
+    });
+  } catch (error) {
+    console.error('Error checking fare:', error);
+    res.status(500).json({ error: 'Fare check failed' });
+  }
+});
+
 // Create Razorpay order and initialize booking (protected)
 router.post('/create-order', authMiddleware, async (req: AuthRequest, res) => {
   try {
@@ -15,13 +65,17 @@ router.post('/create-order', authMiddleware, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Missing flightId or totalPrice' });
     }
 
-    // Verify flight exists
+    // Verify flight exists and is available
     const flight = await prisma.flight.findUnique({
       where: { id: flightId },
     });
 
     if (!flight) {
       return res.status(404).json({ error: 'Flight not found' });
+    }
+
+    if (flight.availableSeats <= 0) {
+      return res.status(400).json({ error: 'Flight is no longer available' });
     }
 
     // Create Razorpay order
@@ -39,7 +93,7 @@ router.post('/create-order', authMiddleware, async (req: AuthRequest, res) => {
         totalPrice,
         razorpayOrderId: order.id,
         paymentStatus: 'pending',
-        status: 'pending',
+        status: 'payment_pending',
       },
       include: {
         flight: true,

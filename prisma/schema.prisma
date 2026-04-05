@@ -51,7 +51,8 @@ model Booking {
   razorpaySignature     String?
   paymentStatus         String    @default("pending")
 
-  status                String    @default("pending")
+  status                String    @default("initiated")  // initiated | payment_pending | payment_verified | confirmed | cancelled
+  cancelledAt           DateTime?
   user                  User      @relation(fields: [userId], references: [id])
   flight                Flight    @relation(fields: [flightId], references: [id])
   createdAt             DateTime  @default(now())
