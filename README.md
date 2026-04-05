@@ -2,13 +2,12 @@
 
 A portfolio-grade travel tech application scaffold for a flight search and booking experience.
 
-## Milestone 1
-- Project scaffolding and base setup
-- Frontend: Next.js + TypeScript + Tailwind CSS
-- Backend: Express.js + TypeScript
-- Prisma setup for MySQL-compatible database
-- Basic health route
-- Landing page
+## Milestone 2
+- Flight search foundation with Prisma models and seed data
+- Backend API for flight search with sorting and filtering
+- Frontend search form and results page
+- Loading, empty, and error states
+- Responsive UI with Tailwind CSS
 
 ## Repo Structure
 - `frontend/` — Next.js app
@@ -20,11 +19,16 @@ A portfolio-grade travel tech application scaffold for a flight search and booki
    ```bash
    npm install
    ```
-2. Start frontend:
+2. Set up database:
+   ```bash
+   npm run --workspace=backend prisma:db:push
+   npm run --workspace=backend prisma:seed
+   ```
+3. Start frontend:
    ```bash
    npm run dev:frontend
    ```
-3. Start backend:
+4. Start backend:
    ```bash
    npm run dev:backend
    ```
@@ -32,3 +36,4 @@ A portfolio-grade travel tech application scaffold for a flight search and booki
 ## Verify
 - Frontend: visit `http://localhost:3000`
 - Backend: visit `http://localhost:4000/api/health`
+- Search: enter JFK to LAX on 2024-04-10

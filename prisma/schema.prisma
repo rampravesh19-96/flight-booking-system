@@ -3,8 +3,22 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
-// Prisma schema is ready for version 1 database models.
+model Flight {
+  id              Int      @id @default(autoincrement())
+  airline         String
+  flightNumber    String   @unique
+  departureAirport String
+  arrivalAirport  String
+  departureTime   DateTime
+  arrivalTime     DateTime
+  price           Float
+  duration        Int       // in minutes
+  availableSeats  Int
+  seatClass       String    @default("ECONOMY")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
